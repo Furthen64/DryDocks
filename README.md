@@ -14,4 +14,28 @@ DryDocks provides automated testing for LLM API compatibility across four levels
 
 All tests target an OpenAI-compatible API endpoint (e.g., Ollama, LocalAI, vLLM).
 
+## Quick Start
 
+1. Create a Python 3.12 virtual environment:
+
+   ```bash
+   uv venv .venv --python 3.12
+   ```
+
+2. Activate it:
+
+   ```bash
+   source .venv/bin/activate
+   ```
+
+3. Run setup to create `drydocks.json` in your current working directory:
+
+   ```bash
+   ./setup.sh
+   ```
+
+4. Run all tests:
+
+   ```bash
+   ./runtests.sh
+   ```
