@@ -1,7 +1,7 @@
 # DryDocks
-DryDocks is a test suite for local LLM and their harnesses. 
+DryDocks is a portable standalone test app for local LLMs and their harnesses.
 
-A comprehensive, production-ready test suite for validating OpenAI-compatible LLM API endpoints. DryDocks is organized, portable, and designed to be deployed on any machine with Python 3.10+.
+A self-contained test suite for validating OpenAI-compatible LLM API endpoints. DryDocks keeps configuration and generated artifacts inside the directory where you run it, so it can be copied between machines without leaving state behind elsewhere on the filesystem.
 
 ## Overview
 
@@ -18,31 +18,30 @@ All tests target an OpenAI-compatible API endpoint (e.g., Ollama, LocalAI, vLLM)
 
 - Python 3.10 or higher
 - A local LLM running with OpenAI-compatible API exposed
-- `uv` package manager (for dependency management)
+- `click` available in your Python environment
 
 ## Quick Start
 
-### 1. Setup
+### 1. Create an Isolated Environment
 
-Clone or copy the DryDocks directory, then run:
+DryDocks is meant to run in-place from its own directory. Copy or clone it anywhere, create a virtual environment inside that directory, and install the one external dependency:
 
 ```bash
-cd /path/to/drydocks
-bash setup.sh
+cd /path/to/DryDocks
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install click
 ```
 
-This will:
-- Create a Python virtual environment at `.venv/`
-- Install dependencies with `uv pip`
-- Show you next steps
+At that point the suite is ready to run directly with `python app.py`.
 
 ### 2. Configure
 
-Activate the virtual environment and run the setup wizard:
+From the DryDocks directory, run the setup wizard:
 
 ```bash
 source .venv/bin/activate
-python -m drydocks setup
+python app.py setup
 ```
 
 You'll be prompted for:
@@ -53,30 +52,30 @@ You'll be prompted for:
 - **Max retries** — Number of retry attempts (default: 2)
 - **Retry delay** — Delay between retries in seconds (default: 1)
 
-Configuration is saved to `~/.config/drydocks/drydocks.json` for reuse across systems.
+Configuration is saved to `.drydocks/config.json` under your current working directory.
 
 ### 3. Run Tests
 
 ```bash
 # Check configuration and connection
-python -m drydocks status
+python app.py status
 
 # Run all tests (5 iterations each)
-python -m drydocks run all --runs 5
+python app.py run all --runs 5
 
 # Run specific test
-python -m drydocks run pong --runs 10
-python -m drydocks run json --runs 10
-python -m drydocks run tool_use --runs 10
-python -m drydocks run agent_flow --runs 3
+python app.py run pong --runs 10
+python app.py run json --runs 10
+python app.py run tool_use --runs 10
+python app.py run agent_flow --runs 3
 
 # Run with verbose output
-python -m drydocks run all --runs 5 --verbose
+python app.py run all --runs 5 --verbose
 ```
 
 ## Configuration File
 
-Configuration is stored at: `~/.config/drydocks/drydocks.json`
+Configuration is stored at: `.drydocks/config.json` in the directory where you run DryDocks.
 
 Example:
 ```json
@@ -91,35 +90,53 @@ Example:
 }
 ```
 
-The file is automatically created by the setup wizard and reused on subsequent runs. Change any settings by running `python -m drydocks setup` again.
+The file is automatically created by the setup wizard and reused on subsequent runs from that directory. Change any settings by running `python app.py setup` again.
+
+## Standalone Layout
+
+DryDocks keeps all of its state inside the directory where you run it. A typical working directory looks like this after configuration and a test run:
+
+```text
+DryDocks/
+├── app.py
+├── drydocks/
+├── .venv/
+├── .drydocks/
+│   └── config.json
+├── results/
+│   └── drydocks_YYYYMMDD_HHMMSS.jsonl
+└── agent_test_out/
+```
+
+Nothing is written to your home directory or global config locations.
 
 ## Test Details
 
 ### Test 1: Pong (`pong`)
 **Complexity:** Beginner  
 **What it tests:** Basic connectivity and simple text generation  
-**Command:** `python -m drydocks run pong --runs 10`
+**Command:** `python app.py run pong --runs 10`
 
 Sends a prompt asking the LLM to reply with "pong" and validates the exact response.
 
 ### Test 2: JSON (`json`)
 **Complexity:** Intermediate  
 **What it tests:** Structured output generation (JSON parsing)  
-**Command:** `python -m drydocks run json --runs 10`
+**Command:** `python app.py run json --runs 10`
 
 Requests a specific JSON structure and validates all required fields are present and correct.
 
 ### Test 3: Tool Use (`tool_use`)
 **Complexity:** Advanced  
 **What it tests:** Function calling with fresh tool definitions per request  
-**Command:** `python -m drydocks run tool_use --runs 10`
+**Command:** `python app.py run tool_use --runs 10`
 
 Provides a dynamic `write_file` tool and verifies the LLM correctly invokes it with expected parameters.
 
 ### Test 4: Agent Flow (`agent_flow`)
 **Complexity:** Expert  
 **What it tests:** Multi-turn conversations with tool integration  
-**Command:** `python -m drydocks run agent_flow --runs 3`
+**Command:** `python app.py run agent_flow --runs 3`
 
 Executes a complete agent workflow:
 1. Simple greeting exchange
@@ -127,7 +144,7 @@ Executes a complete agent workflow:
 3. Tool result handling
 4. Final response
 
-Outputs are saved to `agent_test_out/` for inspection.
+Outputs are saved to `agent_test_out/` in the current working directory for inspection.
 
 ## Output
 
@@ -162,7 +179,7 @@ Results saved to: results/drydocks_20260519_143025.jsonl
 
 ### JSONL Results
 
-Detailed results are saved to `results/drydocks_YYYYMMDD_HHMMSS.jsonl` with one JSON object per line. Each line contains:
+Detailed results are saved to `results/drydocks_YYYYMMDD_HHMMSS.jsonl` in the current working directory, with one JSON object per line. Each line contains:
 
 ```json
 {
@@ -180,16 +197,16 @@ This format is ideal for CI/CD integration and analysis.
 ## Commands
 
 ```
-python -m drydocks setup    # Interactive configuration wizard
-python -m drydocks run      # Run tests (see usage below)
-python -m drydocks status   # Check config and connection
-python -m drydocks reset    # Delete configuration file
+python app.py setup    # Interactive configuration wizard
+python app.py run      # Run tests (see usage below)
+python app.py status   # Check config and connection
+python app.py reset    # Delete configuration file
 ```
 
 ### `run` Command Options
 
 ```
-python -m drydocks run [TEST_NAME] [OPTIONS]
+python app.py run [TEST_NAME] [OPTIONS]
 
 TEST_NAME: Test to run (default: all)
   - pong       Simple connectivity
@@ -209,20 +226,20 @@ OPTIONS:
 DryDocks is designed to be portable:
 
 1. **Copy the directory** to any machine with Python 3.10+
-2. **Run `bash setup.sh`** to initialize
-3. **Run `python -m drydocks setup`** to configure for that machine
-4. **Run tests** with `python -m drydocks run`
+2. **Create `.venv/` and install `click`** inside that directory
+3. **Run `python app.py setup`** from that directory
+4. **Run tests** with `python app.py run`
 
-Each machine stores its own configuration at `~/.config/drydocks/drydocks.json`, so you can test different endpoints without conflicts.
+Each copied working directory keeps its own configuration at `.drydocks/config.json`, so the suite stays self-contained and does not write into your home directory.
 
 ## Troubleshooting
 
 ### "No configuration found"
-Run `python -m drydocks setup` to create a configuration file.
+Run `python app.py setup` to create `.drydocks/config.json` in your current working directory.
 
 ### "Connection refused"
 - Verify your LLM is running and listening on the configured endpoint
-- Check the endpoint URL in configuration (`python -m drydocks status`)
+- Check the endpoint URL in configuration (`python app.py status`)
 - Ensure firewall/network allows access to the LLM port
 
 ### "Invalid JSON in response"
@@ -244,17 +261,18 @@ The multi-turn agent flow is complex. Verify:
 
 Project structure:
 ```
-drydocks/
-├── __init__.py           # Package metadata
-├── __main__.py           # CLI entry point
-├── cli.py                # Click command definitions
-├── config.py             # Configuration management
-├── api.py                # HTTP client wrapper
-├── runner.py             # Test discovery & execution
-├── reporting.py          # Result formatting
-└── tests/
+DryDocks/
+├── app.py                # Standalone app entry point
+└── drydocks/
+  ├── __init__.py       # Package metadata
+  ├── cli.py            # Click command definitions
+  ├── config.py         # Configuration management
+  ├── api.py            # HTTP client wrapper
+  ├── runner.py         # Test discovery & execution
+  ├── reporting.py      # Result formatting
+  └── tests/
     ├── __init__.py
-    ├── base.py           # BaseTest abstract class
+    ├── base.py       # BaseTest abstract class
     ├── test_01_pong.py
     ├── test_02_json.py
     ├── test_03_tool_use.py
@@ -270,9 +288,9 @@ To add a new test:
 ## Requirements
 
 - `click>=8.0` — CLI framework
-- `requests>=2.28` — HTTP client (optional; stdlib urllib used in API layer)
+- Python standard library modules handle HTTP, JSON, and filesystem operations
 
-See `requirements.txt` for full list.
+There is no required global installation or shared config location.
 
 ## License
 
@@ -281,6 +299,6 @@ DryDocks is provided as-is for testing LLM API compatibility.
 ## Support
 
 For issues:
-1. Check `python -m drydocks status` for connection issues
+1. Check `python app.py status` for connection issues
 2. Review JSONL logs in `results/` for detailed failure info
 3. Verify LLM endpoint is accessible and returning valid JSON
