@@ -12,7 +12,7 @@ DryDocks provides automated testing for LLM API compatibility across four levels
 3. **Tool Use Test** — Function calling capability
 4. **Agent Flow Test** — Multi-turn conversations with tool usage
 
-All tests target an OpenAI-compatible API endpoint (e.g., Ollama, LocalAI, vLLM).
+All tests target an OpenAI-compatible API endpoint. The default setup flow assumes a local `llama.cpp` server at `http://localhost:8080/v1`, but Ollama, LocalAI, vLLM, and similar endpoints also work.
 
 ## Quick Start
 
@@ -33,6 +33,9 @@ All tests target an OpenAI-compatible API endpoint (e.g., Ollama, LocalAI, vLLM)
    ```bash
    ./setup.sh
    ```
+
+   Press enter at the base URL prompt to use the `llama.cpp` default: `http://localhost:8080/v1`.
+   The script will probe `/models`, list any discovered model ids or aliases, and let you choose one for `drydocks.json`.
 
 4. Run all tests:
 
