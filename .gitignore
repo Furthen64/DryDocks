@@ -1,7 +1,9 @@
 **/dist
 **/obj
 **/bin
-agent_test_out/
+**/agent_test_out
+**/reports
+
 
 # Extensions
 
