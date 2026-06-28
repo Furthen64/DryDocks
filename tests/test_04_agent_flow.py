@@ -6,6 +6,7 @@ Tests a realistic agentic workflow.
 """
 
 import time
+import shutil
 from pathlib import Path
 from drydocks.tests.base import BaseTest, TestResult
 from drydocks.pytest_runner import run_test_case
@@ -24,6 +25,8 @@ class AgentFlowTest(BaseTest):
 
     def setup(self):
         """Create output directory."""
+        if self.test_output_dir.exists():
+            shutil.rmtree(self.test_output_dir)
         self.test_output_dir.mkdir(exist_ok=True)
 
     def run(self, client, config, run_index: int) -> TestResult:

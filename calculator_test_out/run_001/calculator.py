@@ -1,41 +1,42 @@
 #!/usr/bin/env python3
+"""A simple calculator CLI application."""
 
-"""A simple calculator module with basic arithmetic operations."""
+import sys
 
 def add(a, b):
-    """Add two numbers."""
+    """Return the sum of a and b."""
     return a + b
 
 def subtract(a, b):
-    """Subtract b from a."""
+    """Return the difference of a and b."""
     return a - b
 
 def divide(a, b):
-    """Divide a by b."""
+    """Return the quotient of a and b. Raises ZeroDivisionError if b is zero."""
     if b == 0:
-        raise ValueError("Cannot divide by zero.")
+        raise ZeroDivisionError("Cannot divide by zero.")
     return a / b
 
 def power(a, b):
-    """Raise a to the power of b."""
+    """Return a raised to the power of b."""
     return a ** b
 
 def calculate(operation, a, b):
-    """Perform an operation on two numbers."""
+    """Perform a calculation based on the operation type."""
     operations = {
         'add': add,
         'subtract': subtract,
         'divide': divide,
         'power': power
     }
-    if operation not in operations:
-        raise ValueError(f"Unsupported operation: {operation}")
-    return operations[operation](a, b)
-
-
-if __name__ == "__main__":
-    import sys
     
+    if operation in operations:
+        return operations[operation](a, b)
+    else:
+        raise ValueError(f"Unsupported operation: {operation}")
+
+def main():
+    """Main entry point for the CLI."""
     if len(sys.argv) != 4:
         print("Usage: python calculator.py <operation> <a> <b>")
         print("Operations: add, subtract, divide, power")
@@ -50,3 +51,9 @@ if __name__ == "__main__":
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
+    except ZeroDivisionError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

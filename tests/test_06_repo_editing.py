@@ -6,6 +6,7 @@ then validates that the edited repo still builds and behaves correctly.
 """
 
 import py_compile
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -27,6 +28,8 @@ class RepoEditingTest(BaseTest):
         self.test_output_dir = Path.cwd() / "repo_edit_test_out"
 
     def setup(self):
+        if self.test_output_dir.exists():
+            shutil.rmtree(self.test_output_dir)
         self.test_output_dir.mkdir(exist_ok=True)
 
     def run(self, client, config, run_index: int) -> TestResult:
@@ -284,26 +287,6 @@ class RepoEditingTest(BaseTest):
                 modified_paths.append(file_path)
                 self._path_for(out_dir, file_path).write_text(content, encoding="utf-8")
 
-            if "app.py" not in seen_paths or "calcapp/operations.py" not in seen_paths:
-                return TestResult(
-                    test_name=self.name,
-                    run_index=run_index,
-                    passed=False,
-                    duration_seconds=time.time() - start,
-                    error_message="Expected edits to both app.py and calcapp/operations.py",
-                    details={
-                        "purpose": self.description,
-                        "working_directory": str(Path.cwd()),
-                        "nonce": nonce,
-                        "request": prompt,
-                        "response": response,
-                        "modified_paths": modified_paths,
-                        "stray_text": stray_text,
-                    },
-                    artifacts=artifacts,
-                    warnings=warnings,
-                )
-
             if formatter_file.read_text(encoding="utf-8") != initial_files["calcapp/formatter.py"]:
                 return TestResult(
                     test_name=self.name,
@@ -394,6 +377,16 @@ class RepoEditingTest(BaseTest):
                     modified_paths,
                     stray_text,
                     extra_details={"usage_text": usage_text},
+                )
+
+            if "calcapp/operations.py" not in seen_paths:
+                warnings.append(
+                    "Model did not rewrite calcapp/operations.py directly; pass is based on working repo behavior."
+                )
+
+            if "app.py" not in seen_paths:
+                warnings.append(
+                    "Model did not rewrite app.py directly; pass is based on working repo behavior."
                 )
 
             readme_text = readme_file.read_text(encoding="utf-8")

@@ -7,6 +7,7 @@ verifying the app still compiles and works after each step.
 
 import importlib.util
 import py_compile
+import shutil
 import subprocess
 import sys
 import time
@@ -27,6 +28,8 @@ class CalculatorRefactorTest(BaseTest):
         self.test_output_dir = Path.cwd() / "calculator_test_out"
 
     def setup(self):
+        if self.test_output_dir.exists():
+            shutil.rmtree(self.test_output_dir)
         self.test_output_dir.mkdir(exist_ok=True)
 
     def run(self, client, config, run_index: int) -> TestResult:
