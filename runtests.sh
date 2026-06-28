@@ -34,4 +34,4 @@ if ! python3 -c "import pytest" >/dev/null 2>&1; then
 fi
 
 python3 -m pytest tests "$@"
-echo "Latest report: ${PWD}/reports"
+echo "Latest report: ${PWD}/reports/latest-report.txt"

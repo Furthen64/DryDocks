@@ -43,4 +43,4 @@ All tests target an OpenAI-compatible API endpoint. The default setup flow assum
    ./runtests.sh
    ```
 
-   DryDocks also writes a plain-text report for each run under `reports/`.
+   DryDocks also writes a plain-text report for each run under `reports/`, with the latest copy at `reports/latest-report.txt`.

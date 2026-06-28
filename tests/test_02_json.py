@@ -6,6 +6,7 @@ Tests that the LLM can generate properly formatted JSON responses according to a
 
 import json
 import time
+from pathlib import Path
 from drydocks.tests.base import BaseTest, TestResult
 from drydocks.pytest_runner import run_test_case
 
@@ -56,6 +57,13 @@ class JsonContractTest(BaseTest):
                     passed=False,
                     duration_seconds=time.time() - start,
                     error_message=f"Invalid JSON: {e}",
+                    details={
+                        "purpose": "Structured JSON contract validation",
+                        "working_directory": str(Path.cwd()),
+                        "request": payload,
+                        "response": response,
+                        "raw_text": text,
+                    },
                 )
 
             # Validate structure
@@ -69,6 +77,13 @@ class JsonContractTest(BaseTest):
                     passed=False,
                     duration_seconds=time.time() - start,
                     error_message=f"Missing keys: {required_keys - actual_keys}",
+                    details={
+                        "purpose": "Structured JSON contract validation",
+                        "working_directory": str(Path.cwd()),
+                        "request": payload,
+                        "response": response,
+                        "parsed_json": obj,
+                    },
                 )
 
             # Check values
@@ -84,9 +99,23 @@ class JsonContractTest(BaseTest):
                 passed = False
                 error_msg = f"Unexpected values in JSON: {obj}"
 
+            details = {
+                "purpose": "Structured JSON contract validation",
+                "working_directory": str(Path.cwd()),
+                "request": payload,
+                "response": response,
+                "raw_text": text,
+                "parsed_json": obj,
+            }
+
         except Exception as e:
             passed = False
             error_msg = str(e)
+            details = {
+                "purpose": "Structured JSON contract validation",
+                "working_directory": str(Path.cwd()),
+                "request": payload,
+            }
 
         duration = time.time() - start
 
@@ -96,6 +125,7 @@ class JsonContractTest(BaseTest):
             passed=passed,
             duration_seconds=duration,
             error_message=error_msg,
+            details=details,
         )
 
 

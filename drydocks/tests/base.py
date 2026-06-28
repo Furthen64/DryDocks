@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -17,6 +18,9 @@ class TestResult:
     passed: bool
     duration_seconds: float
     error_message: str | None = None
+    details: dict[str, Any] = field(default_factory=dict)
+    artifacts: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 class BaseTest(ABC):

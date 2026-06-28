@@ -5,6 +5,7 @@ Tests basic LLM connectivity by sending a simple prompt and verifying a "pong" r
 """
 
 import time
+from pathlib import Path
 from drydocks.tests.base import BaseTest, TestResult
 from drydocks.pytest_runner import run_test_case
 
@@ -49,9 +50,22 @@ class PongTest(BaseTest):
                 passed = False
                 error_msg = f"Expected 'pong', got '{text}'"
 
+            details = {
+                "purpose": "Basic connectivity check",
+                "working_directory": str(Path.cwd()),
+                "request": payload,
+                "response": response,
+                "validated_output": text,
+            }
+
         except Exception as e:
             passed = False
             error_msg = str(e)
+            details = {
+                "purpose": "Basic connectivity check",
+                "working_directory": str(Path.cwd()),
+                "request": payload,
+            }
 
         duration = time.time() - start
 
@@ -61,6 +75,7 @@ class PongTest(BaseTest):
             passed=passed,
             duration_seconds=duration,
             error_message=error_msg,
+            details=details,
         )
 
 

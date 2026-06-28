@@ -20,6 +20,7 @@ def _write_report_at_exit() -> None:
     global _REPORT_PATH
     _REPORT_PATH = _REPORTER.write(_CONFIG)
     print(f"DryDocks report: {_REPORT_PATH}")
+    print(f"DryDocks latest report: {_REPORTER.latest_report_path}")
 
 
 atexit.register(_write_report_at_exit)
