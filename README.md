@@ -5,12 +5,14 @@ A self-contained test suite for validating OpenAI-compatible LLM API endpoints. 
 
 ## Overview
 
-DryDocks provides automated testing for LLM API compatibility across four levels of complexity:
+DryDocks provides automated testing for LLM API compatibility across six levels of complexity:
 
 1. **Pong Test** — Basic connectivity check
 2. **JSON Test** — Structured output validation
 3. **Tool Use Test** — Function calling capability
 4. **Agent Flow Test** — Multi-turn conversations with tool usage
+5. **Calculator Refactor Test** — Generate, modify, and simplify a working app
+6. **Repo Editing Test** — Edit existing files in a seeded multi-file repo
 
 All tests target an OpenAI-compatible API endpoint. The default setup flow assumes a local `llama.cpp` server at `http://localhost:8080/v1`, but Ollama, LocalAI, vLLM, and similar endpoints also work.
 
