@@ -7,6 +7,7 @@ Tests the LLM's ability to use tools (function calling) with fresh, unique tool 
 import time
 import random
 from drydocks.tests.base import BaseTest, TestResult
+from drydocks.pytest_runner import run_test_case
 
 
 class ToolUseTest(BaseTest):
@@ -110,3 +111,8 @@ class ToolUseTest(BaseTest):
             duration_seconds=duration,
             error_message=error_msg,
         )
+
+
+def test_tool_use():
+    """Pytest entrypoint for the object-style test case."""
+    run_test_case(ToolUseTest)

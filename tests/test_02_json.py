@@ -7,6 +7,7 @@ Tests that the LLM can generate properly formatted JSON responses according to a
 import json
 import time
 from drydocks.tests.base import BaseTest, TestResult
+from drydocks.pytest_runner import run_test_case
 
 
 class JsonContractTest(BaseTest):
@@ -96,3 +97,8 @@ class JsonContractTest(BaseTest):
             duration_seconds=duration,
             error_message=error_msg,
         )
+
+
+def test_json_contract():
+    """Pytest entrypoint for the object-style test case."""
+    run_test_case(JsonContractTest)

@@ -1,0 +1,17 @@
+# Source this file: source actenv
+if [ -f ".venv/pyvenv.cfg" ]; then
+    if grep -q '^uv = ' ".venv/pyvenv.cfg"; then
+        echo "[INFO] Environment type: uv venv"
+    else
+        echo "[INFO] Environment type: python -m venv / compatible"
+    fi
+
+    source ".venv/bin/activate"
+    echo "[INFO] Activated: $VIRTUAL_ENV"
+    python --version
+else
+    echo "[ERROR] No .venv found here: $(pwd)/.venv"
+    echo "[INFO] Create one with either:"
+    echo "       uv venv"
+    echo "       python3 -m venv .venv"
+fi

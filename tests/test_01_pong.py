@@ -6,6 +6,7 @@ Tests basic LLM connectivity by sending a simple prompt and verifying a "pong" r
 
 import time
 from drydocks.tests.base import BaseTest, TestResult
+from drydocks.pytest_runner import run_test_case
 
 
 class PongTest(BaseTest):
@@ -61,3 +62,8 @@ class PongTest(BaseTest):
             duration_seconds=duration,
             error_message=error_msg,
         )
+
+
+def test_pong():
+    """Pytest entrypoint for the object-style test case."""
+    run_test_case(PongTest)

@@ -1,5 +1,5 @@
 {
-  "base_url": "http://localhost:8080/v1",
-  "model": "qwen",
-  "api_key": "sktest"
+  "base_url": "http://192.168.1.117:8080/v1",
+  "model": "/home/fat64/llama/models/Qwen3-Coder-Next-UD-IQ2_XXS.gguf",
+  "api_key": ""
 }

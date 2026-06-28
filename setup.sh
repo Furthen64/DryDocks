@@ -29,6 +29,29 @@ prompt_with_default() {
   fi
 }
 
+prompt_model_selection() {
+  local default_value="${1:-}"
+  local value=""
+
+  if [[ -n "${default_value}" ]]; then
+    read -r -p "Model selection (number or exact id) [${default_value}]: " value
+    if [[ -n "${value}" ]]; then
+      printf '%s' "${value}"
+    else
+      printf '%s' "${default_value}"
+    fi
+  else
+    while true; do
+      read -r -p "Model selection (number or exact id): " value
+      if [[ -n "${value}" ]]; then
+        printf '%s' "${value}"
+        return 0
+      fi
+      echo "Model selection cannot be empty."
+    done
+  fi
+}
+
 probe_models() {
   local base_url="$1"
   local api_key="$2"
@@ -88,6 +111,22 @@ def aliases_for(model):
             result.append(value)
     return result
 
+def display_aliases_for(aliases):
+    display_values = []
+    for value in aliases:
+        trimmed = value.rstrip("/")
+        if "/" in trimmed:
+            trimmed = trimmed.split("/")[-1]
+        display_values.append(trimmed or value)
+
+    seen = set()
+    result = []
+    for value in display_values:
+        if value not in seen:
+            seen.add(value)
+            result.append(value)
+    return result
+
 primary_ids = []
 print("Available models:")
 for index, model in enumerate(items, start=1):
@@ -96,18 +135,26 @@ for index, model in enumerate(items, start=1):
 
     aliases = aliases_for(model)
     primary = model.get("id")
+    exact_id = None
     if isinstance(primary, str) and primary:
         primary_ids.append(primary)
+        exact_id = primary
     elif aliases:
         primary_ids.append(aliases[0])
+        exact_id = aliases[0]
 
-    if aliases:
-        print(f"  {index}. " + " | ".join(aliases))
+    display_aliases = display_aliases_for(aliases)
+
+    if display_aliases:
+        print(f"  {index}. " + " | ".join(display_aliases))
     else:
         print(f"  {index}. <unnamed model entry>")
 
+    if exact_id:
+        print(f"MODEL_CHOICE\t{index}\t{exact_id}")
+
 if len(primary_ids) == 1:
-    print(f"DEFAULT_MODEL={primary_ids[0]}")
+    print("DEFAULT_MODEL=1")
 PY
 }
 
@@ -120,13 +167,25 @@ read -r -p "API key (optional, llama.cpp usually leaves this blank): " api_key
 
 model_probe_output="$(probe_models "${endpoint}" "${api_key}")"
 if [[ -n "${model_probe_output}" ]]; then
-  printf '%s\n' "${model_probe_output}" | sed '/^DEFAULT_MODEL=/d'
+  printf '%s\n' "${model_probe_output}" | sed '/^DEFAULT_MODEL=/d;/^MODEL_CHOICE\t/d'
 fi
+
+declare -A discovered_models=()
+while IFS=$'\t' read -r marker index exact_id; do
+  if [[ "${marker}" == "MODEL_CHOICE" && -n "${index}" && -n "${exact_id}" ]]; then
+    discovered_models["${index}"]="${exact_id}"
+  fi
+done < <(printf '%s\n' "${model_probe_output}")
 
 discovered_default_model="$(printf '%s\n' "${model_probe_output}" | sed -n 's/^DEFAULT_MODEL=//p' | head -n 1)"
 
-if [[ -n "${discovered_default_model}" ]]; then
-  model="$(prompt_with_default "Model name" "${discovered_default_model}")"
+if [[ ${#discovered_models[@]} -gt 0 ]]; then
+  selection="$(prompt_model_selection "${discovered_default_model}")"
+  if [[ -n "${discovered_models[${selection}]:-}" ]]; then
+    model="${discovered_models[${selection}]}"
+  else
+    model="${selection}"
+  fi
 else
   model="$(prompt_required "Model name (required by the API request)")"
 fi

@@ -35,7 +35,7 @@ All tests target an OpenAI-compatible API endpoint. The default setup flow assum
    ```
 
    Press enter at the base URL prompt to use the `llama.cpp` default: `http://localhost:8080/v1`.
-   The script will probe `/models`, list any discovered model ids or aliases, and let you choose one for `drydocks.json`.
+   The script will probe `/models`, show friendly model names, and let you select by number or exact model id for `drydocks.json`.
 
 4. Run all tests:
 

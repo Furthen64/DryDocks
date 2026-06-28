@@ -8,6 +8,7 @@ Tests a realistic agentic workflow.
 import time
 from pathlib import Path
 from drydocks.tests.base import BaseTest, TestResult
+from drydocks.pytest_runner import run_test_case
 
 
 class AgentFlowTest(BaseTest):
@@ -238,3 +239,8 @@ class AgentFlowTest(BaseTest):
             if block.get("type") == "tool_use" and block.get("name") == "write_file"
         ]
         return tool_blocks[0] if len(tool_blocks) == 1 else None
+
+
+def test_agent_flow():
+    """Pytest entrypoint for the object-style test case."""
+    run_test_case(AgentFlowTest)
