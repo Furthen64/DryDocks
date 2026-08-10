@@ -179,113 +179,182 @@ class RepoEditingTest(BaseTest):
             ```
             """
         ).strip()
+        messages = [{"role": "user", "content": prompt}]
+        round_details = []
 
         try:
-            response = client.post_message(
-                {
-                    "model": config.get("model"),
-                    "max_tokens": 2200,
-                    "tools": tools,
-                    "messages": [{"role": "user", "content": prompt}],
-                }
-            )
-            stray_text = self._get_text(response)
-            if stray_text:
-                warnings.append(
-                    "Model returned stray text alongside repo edit tool_use blocks; treated as caution pass."
-                )
+            modified_paths = []
+            last_response = None
+            last_stray_text = ""
+            allowed_files = {"app.py", "calcapp/operations.py", "README.md"}
 
-            tool_uses = self._get_write_file_tools(response)
-            if not tool_uses:
-                return TestResult(
-                    test_name=self.name,
-                    run_index=run_index,
-                    passed=False,
-                    duration_seconds=time.time() - start,
-                    error_message="Missing write_file tool_use blocks for repo edits",
-                    details={
-                        "purpose": self.description,
-                        "working_directory": str(Path.cwd()),
-                        "nonce": nonce,
-                        "request": prompt,
+            for round_index in range(1, 4):
+                response = client.post_message(
+                    {
+                        "model": config.get("model"),
+                        "max_tokens": 3200,
+                        "temperature": 0.0,
+                        "tools": tools,
+                        "messages": messages,
+                    }
+                )
+                last_response = response
+                stray_text = self._get_text(response)
+                last_stray_text = stray_text
+                if stray_text:
+                    warnings.append(
+                        f"Model returned stray text alongside repo edit tool_use blocks in round {round_index}; treated as caution pass."
+                    )
+
+                tool_uses = self._get_write_file_tools(response)
+                round_written_paths = []
+
+                if not tool_uses:
+                    if self._get_text(response) == "done":
+                        round_details.append(
+                            {
+                                "round": round_index,
+                                "response": response,
+                                "stray_text": stray_text,
+                                "written_paths": round_written_paths,
+                            }
+                        )
+                        break
+                    if modified_paths:
+                        round_details.append(
+                            {
+                                "round": round_index,
+                                "response": response,
+                                "stray_text": stray_text,
+                                "written_paths": round_written_paths,
+                            }
+                        )
+                        break
+                    return TestResult(
+                        test_name=self.name,
+                        run_index=run_index,
+                        passed=False,
+                        duration_seconds=time.time() - start,
+                        error_message="Missing write_file tool_use blocks for repo edits",
+                        details={
+                            "purpose": self.description,
+                            "working_directory": str(Path.cwd()),
+                            "nonce": nonce,
+                            "request": prompt,
+                            "response": response,
+                            "stray_text": stray_text,
+                        },
+                        artifacts=artifacts,
+                    )
+
+                seen_paths_in_round = set()
+                tool_results = []
+
+                for tool_use in tool_uses:
+                    tool_input = tool_use.get("input", {})
+                    file_path = tool_input.get("file_path")
+                    content = tool_input.get("content")
+
+                    if file_path not in allowed_files:
+                        return TestResult(
+                            test_name=self.name,
+                            run_index=run_index,
+                            passed=False,
+                            duration_seconds=time.time() - start,
+                            error_message=f"Unexpected edited file '{file_path}'",
+                            details={
+                                "purpose": self.description,
+                                "working_directory": str(Path.cwd()),
+                                "nonce": nonce,
+                                "request": prompt,
+                                "response": response,
+                                "stray_text": stray_text,
+                                "tool_input": tool_input,
+                                "round": round_index,
+                            },
+                            artifacts=artifacts,
+                            warnings=warnings,
+                        )
+
+                    if file_path in seen_paths_in_round:
+                        return TestResult(
+                            test_name=self.name,
+                            run_index=run_index,
+                            passed=False,
+                            duration_seconds=time.time() - start,
+                            error_message=f"Duplicate write for '{file_path}' in one round",
+                            details={
+                                "purpose": self.description,
+                                "working_directory": str(Path.cwd()),
+                                "nonce": nonce,
+                                "request": prompt,
+                                "response": response,
+                                "stray_text": stray_text,
+                                "tool_input": tool_input,
+                                "round": round_index,
+                            },
+                            artifacts=artifacts,
+                            warnings=warnings,
+                        )
+
+                    if not isinstance(content, str):
+                        return TestResult(
+                            test_name=self.name,
+                            run_index=run_index,
+                            passed=False,
+                            duration_seconds=time.time() - start,
+                            error_message=f"Edited content for '{file_path}' was not a string",
+                            details={
+                                "purpose": self.description,
+                                "working_directory": str(Path.cwd()),
+                                "nonce": nonce,
+                                "request": prompt,
+                                "response": response,
+                                "stray_text": stray_text,
+                                "tool_input": tool_input,
+                                "round": round_index,
+                            },
+                            artifacts=artifacts,
+                            warnings=warnings,
+                        )
+
+                    seen_paths_in_round.add(file_path)
+                    round_written_paths.append(file_path)
+                    modified_paths.append(file_path)
+                    self._path_for(out_dir, file_path).write_text(content, encoding="utf-8")
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": tool_use.get("id"),
+                            "content": f"{file_path} was written successfully.",
+                        }
+                    )
+
+                round_details.append(
+                    {
+                        "round": round_index,
                         "response": response,
                         "stray_text": stray_text,
-                    },
-                    artifacts=artifacts,
+                        "written_paths": round_written_paths,
+                    }
                 )
 
-            allowed_files = {"app.py", "calcapp/operations.py", "README.md"}
-            seen_paths = set()
-            modified_paths = []
-
-            for tool_use in tool_uses:
-                tool_input = tool_use.get("input", {})
-                file_path = tool_input.get("file_path")
-                content = tool_input.get("content")
-
-                if file_path not in allowed_files:
-                    return TestResult(
-                        test_name=self.name,
-                        run_index=run_index,
-                        passed=False,
-                        duration_seconds=time.time() - start,
-                        error_message=f"Unexpected edited file '{file_path}'",
-                        details={
-                            "purpose": self.description,
-                            "working_directory": str(Path.cwd()),
-                            "nonce": nonce,
-                            "request": prompt,
-                            "response": response,
-                            "stray_text": stray_text,
-                            "tool_input": tool_input,
-                        },
-                        artifacts=artifacts,
-                        warnings=warnings,
-                    )
-
-                if file_path in seen_paths:
-                    return TestResult(
-                        test_name=self.name,
-                        run_index=run_index,
-                        passed=False,
-                        duration_seconds=time.time() - start,
-                        error_message=f"Duplicate write for '{file_path}'",
-                        details={
-                            "purpose": self.description,
-                            "working_directory": str(Path.cwd()),
-                            "nonce": nonce,
-                            "request": prompt,
-                            "response": response,
-                            "stray_text": stray_text,
-                            "tool_input": tool_input,
-                        },
-                        artifacts=artifacts,
-                        warnings=warnings,
-                    )
-
-                if not isinstance(content, str):
-                    return TestResult(
-                        test_name=self.name,
-                        run_index=run_index,
-                        passed=False,
-                        duration_seconds=time.time() - start,
-                        error_message=f"Edited content for '{file_path}' was not a string",
-                        details={
-                            "purpose": self.description,
-                            "working_directory": str(Path.cwd()),
-                            "nonce": nonce,
-                            "request": prompt,
-                            "response": response,
-                            "stray_text": stray_text,
-                            "tool_input": tool_input,
-                        },
-                        artifacts=artifacts,
-                        warnings=warnings,
-                    )
-
-                seen_paths.add(file_path)
-                modified_paths.append(file_path)
-                self._path_for(out_dir, file_path).write_text(content, encoding="utf-8")
+                messages.append({"role": "assistant", "content": response.get("content", [])})
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": tool_results
+                        + [
+                            {
+                                "type": "text",
+                                "text": (
+                                    "Continue editing any remaining allowed files needed to fully satisfy "
+                                    "all goals. If the repo is complete, reply exactly: done"
+                                ),
+                            }
+                        ],
+                    }
+                )
 
             if formatter_file.read_text(encoding="utf-8") != initial_files["calcapp/formatter.py"]:
                 return TestResult(
@@ -299,7 +368,7 @@ class RepoEditingTest(BaseTest):
                         "working_directory": str(Path.cwd()),
                         "nonce": nonce,
                         "request": prompt,
-                        "response": response,
+                        "response": last_response,
                         "modified_paths": modified_paths,
                     },
                     artifacts=artifacts,
@@ -320,12 +389,13 @@ class RepoEditingTest(BaseTest):
                     run_index,
                     nonce,
                     prompt,
-                    response,
+                    last_response,
                     artifacts,
                     warnings,
                     f"Expected add output 9, got '{add_output}'",
                     modified_paths,
-                    stray_text,
+                    last_stray_text,
+                    extra_details={"rounds": round_details},
                 )
 
             if not self._output_matches_number(multiply_output, 42):
@@ -334,12 +404,13 @@ class RepoEditingTest(BaseTest):
                     run_index,
                     nonce,
                     prompt,
-                    response,
+                    last_response,
                     artifacts,
                     warnings,
                     f"Expected multiply output 42, got '{multiply_output}'",
                     modified_paths,
-                    stray_text,
+                    last_stray_text,
+                    extra_details={"rounds": round_details},
                 )
 
             if not self._output_matches_number(mul_output, 24):
@@ -348,12 +419,13 @@ class RepoEditingTest(BaseTest):
                     run_index,
                     nonce,
                     prompt,
-                    response,
+                    last_response,
                     artifacts,
                     warnings,
                     f"Expected mul output 24, got '{mul_output}'",
                     modified_paths,
-                    stray_text,
+                    last_stray_text,
+                    extra_details={"rounds": round_details},
                 )
 
             usage_process = subprocess.run(
@@ -370,21 +442,19 @@ class RepoEditingTest(BaseTest):
                     run_index,
                     nonce,
                     prompt,
-                    response,
+                    last_response,
                     artifacts,
                     warnings,
                     "CLI usage text did not mention multiply and mul",
                     modified_paths,
-                    stray_text,
-                    extra_details={"usage_text": usage_text},
+                    last_stray_text,
+                    extra_details={"usage_text": usage_text, "rounds": round_details},
                 )
 
-            if "calcapp/operations.py" not in seen_paths:
-                warnings.append(
-                    "Model did not rewrite calcapp/operations.py directly; pass is based on working repo behavior."
-                )
+            if "calcapp/operations.py" not in modified_paths:
+                warnings.append("Model did not rewrite calcapp/operations.py directly; pass is based on working repo behavior.")
 
-            if "app.py" not in seen_paths:
+            if "app.py" not in modified_paths:
                 warnings.append(
                     "Model did not rewrite app.py directly; pass is based on working repo behavior."
                 )
@@ -396,13 +466,13 @@ class RepoEditingTest(BaseTest):
                     run_index,
                     nonce,
                     prompt,
-                    response,
+                    last_response,
                     artifacts,
                     warnings,
                     "README.md did not document multiply and mul",
                     modified_paths,
-                    stray_text,
-                    extra_details={"readme_text": readme_text},
+                    last_stray_text,
+                    extra_details={"readme_text": readme_text, "rounds": round_details},
                 )
 
             return TestResult(
@@ -415,9 +485,10 @@ class RepoEditingTest(BaseTest):
                     "working_directory": str(Path.cwd()),
                     "nonce": nonce,
                     "request": prompt,
-                    "response": response,
+                    "response": last_response,
                     "modified_paths": modified_paths,
-                    "stray_text": stray_text,
+                    "stray_text": last_stray_text,
+                    "rounds": round_details,
                     "cli_outputs": {
                         "add 4 5": add_output,
                         "multiply 6 7": multiply_output,
@@ -440,6 +511,7 @@ class RepoEditingTest(BaseTest):
                     "purpose": self.description,
                     "working_directory": str(Path.cwd()),
                     "nonce": nonce,
+                    "rounds": round_details,
                 },
                 artifacts=artifacts,
                 warnings=warnings,

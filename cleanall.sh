@@ -5,6 +5,7 @@ targets=(
   "agent_test_out"
   "calculator_test_out"
   "repo_edit_test_out"
+  "repo_debug_test_out"
   "reports"
 )
 
